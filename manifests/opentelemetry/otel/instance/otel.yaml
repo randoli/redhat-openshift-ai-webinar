@@ -1,0 +1,55 @@
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: otel-sno
+spec:
+  mode: deployment
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  config:
+    extensions:
+      bearertokenauth:
+        filename: "/var/run/secrets/kubernetes.io/serviceaccount/token"
+
+    receivers:
+      otlp:
+        protocols:
+          grpc: {}
+          http: {}
+    
+    processors:
+      memory_limiter:
+        check_interval: 1s
+        limit_percentage: 75
+        spike_limit_percentage: 15
+      
+      batch:
+        send_batch_size: 256
+        timeout: 5s
+
+    exporters:
+      debug:
+        verbosity: normal
+      otlp/tempo:
+        endpoint: "tempo-sno-gateway.tempo-observability.svc.cluster.local:4317"
+        auth:
+          authenticator: bearertokenauth
+        tls:
+          insecure: false
+          ca_file: "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"
+        headers:
+          X-Scope-OrgID: "demo"
+
+    service:
+      extensions: [bearertokenauth]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [otlp/tempo,debug]

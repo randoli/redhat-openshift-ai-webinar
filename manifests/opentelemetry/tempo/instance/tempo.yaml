@@ -1,0 +1,18 @@
+apiVersion: tempo.grafana.com/v1alpha1
+kind: TempoMonolithic
+metadata:
+  name: sno
+spec:
+  storage:
+    traces:
+      backend: pv
+  jaegerui:
+    enabled: true
+    route:
+      enabled: true
+  multitenancy:
+    enabled: true
+    mode: openshift
+    authentication:
+      - tenantName: demo
+        tenantId: demo
